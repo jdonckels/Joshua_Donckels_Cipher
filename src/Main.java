@@ -22,64 +22,90 @@ public class Main {
             "6d066994cc56127c6b909afec45c2788"};
 
     private static char IV[];
+    private static String currentText;
+    private static String currentIV;
+    private static String output;
 
     public static void main (String[] args)
     {
 
-        IV = ciphertexts[4].toCharArray();
 
-        for(int j = 15; j >= 0; j--) {
-            for (int i = 0; i < 256; i++) {
+        for(int f = 0; f < ciphertexts.length - 2; f++) {
+            currentText = ciphertexts[f + 1];
+            currentIV = ciphertexts[f];
+            IV = currentIV.toCharArray();
 
-                String IVinput = "";
-                String hex;
-                if (i < 16) {
-                    hex = Integer.toHexString(i);
-                    IV[30 - (numberOfRValues * 2)] = '0';
-                    IV[31 - (numberOfRValues * 2)] = hex.charAt(0);
-                } else {
-                    hex = Integer.toHexString(i);
-                    IV[30 - (numberOfRValues * 2)] = hex.charAt(0);
-                    IV[31 - (numberOfRValues * 2)] = hex.charAt(1);
-                }
+            for (int j = 15; j >= 0; j--) {
+                for (int i = 0; i < 256; i++) {
 
-                for (char c : IV) IVinput += String.valueOf(c);
-                if (runServer(IVinput + ciphertexts[5])) {
-                    int value = Integer.parseInt(hex, 16);
-                    numberOfRValues++;
-                    //Right now it does not add a zero when the value is below 16
-                    if(value < 15 && j != 0)
+                    String IVinput = "";
+                    String hex = "";
+
+                    if( f != ciphertexts.length - 3)
                     {
-                        String holder = "0";
-                        R[j] = holder + Integer.toHexString(value ^ (16 - j));
+                        if (i < 16) {
+                            hex = Integer.toHexString(i);
+                            IV[30 - (numberOfRValues * 2)] = '0';
+                            IV[31 - (numberOfRValues * 2)] = hex.charAt(0);
+                        } else {
+                            hex = Integer.toHexString(i);
+                            IV[30 - (numberOfRValues * 2)] = hex.charAt(0);
+                            IV[31 - (numberOfRValues * 2)] = hex.charAt(1);
+                        }
                     }
                     else
                     {
-                        R[j] = Integer.toHexString(value ^ (16 - j));
+                        int value = Integer.parseInt(currentIV.substring(30 - (numberOfRValues * 2), 31 - (numberOfRValues * 2)), 16);
+                        if (i < 16 && i != value) {
+                            hex = Integer.toHexString(i);
+                            IV[30 - (numberOfRValues * 2)] = '0';
+                            IV[31 - (numberOfRValues * 2)] = hex.charAt(0);
+                        } else if(i != value) {
+                            hex = Integer.toHexString(i);
+                            IV[30 - (numberOfRValues * 2)] = hex.charAt(0);
+                            IV[31 - (numberOfRValues * 2)] = hex.charAt(1);
+                        }
                     }
-                    updateIV();
-                    System.out.println(IVinput);
-                    System.out.print("R = ");
-                    for(String k : R) System.out.print(" " + k);
-                    System.out.println();
-                    break;
+
+                    for (char c : IV) IVinput += String.valueOf(c);
+
+                    if (runServer(IVinput + currentText)) {
+                        int value = Integer.parseInt(hex, 16);
+                        numberOfRValues++;
+                        //Right now it does not add a zero when the value is below 16
+                        if (value < 15 && j != 0) {
+                            String holder = "0";
+                            R[j] = holder + Integer.toHexString(value ^ (16 - j));
+                        } else {
+                            R[j] = Integer.toHexString(value ^ (16 - j));
+                        }
+                        updateIV();
+                        //System.out.println(IVinput);
+                        //System.out.print("R = ");
+                        //for (String k : R) System.out.print(" " + k);
+                        //System.out.println();
+                        break;
+                    }
                 }
             }
+
+            String finalHexString = "";
+
+
+            for (int i = 0; i < 32; i += 2) {
+                int valueFromR = Integer.parseInt(R[i / 2], 16);
+                String hexFromOriginalIV = currentIV.substring(i, i + 2);
+                int valueFromIV = Integer.parseInt(hexFromOriginalIV, 16);
+                String finalHex = Integer.toHexString(valueFromR ^ valueFromIV);
+                finalHexString += finalHex;
+            }
+
+            numberOfRValues = 0;
+            R = new String[16];
+
+            output += convertHexToString(finalHexString);
+            System.out.println(output);
         }
-
-        String finalHexString = "";
-
-
-        for(int i = 0; i < 32; i+=2)
-        {
-            int valueFromR = Integer.parseInt(R[i/2], 16);
-            String hexFromOriginalIV = ciphertexts[4].substring(i, i + 2);
-            int valueFromIV = Integer.parseInt(hexFromOriginalIV, 16);
-            String finalHex = Integer.toHexString(valueFromR ^ valueFromIV);
-            finalHexString += finalHex;
-        }
-
-        String output = convertHexToString(finalHexString);
         System.out.println(output);
     }
 
@@ -118,7 +144,6 @@ public class Main {
 
             temp.append(decimal);
         }
-        System.out.println("Decimal : " + temp.toString());
 
         return sb.toString();
     }
